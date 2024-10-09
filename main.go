@@ -1,10 +1,10 @@
 package main
 
 import (
-	"ecommerce-yt/database"
-	"ecommerce-yt/middleware"
-	"ecommerce-yt/routes"
 	"fmt"
+	"kontest-api/database"
+	"kontest-api/middleware"
+	"kontest-api/routes"
 	"net/http"
 	"os"
 )

@@ -1,4 +1,4 @@
-module ecommerce-yt
+module kontest-api
 
 go 1.23.1
 

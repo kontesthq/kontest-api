@@ -1,6 +1,6 @@
 package utils
 
-import "ecommerce-yt/utils/enums"
+import "kontest-api/utils/enums"
 
 // SiteUtils provides utility functions related to sites
 type SiteUtils struct{}

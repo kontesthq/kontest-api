@@ -1,8 +1,8 @@
 package service
 
 import (
-	"ecommerce-yt/database"
-	"ecommerce-yt/model" // Update with your actual model package path
+	"kontest-api/database"
+	"kontest-api/model" // Update with your actual model package path
 )
 
 // KontestService interface defines the methods for contest operations

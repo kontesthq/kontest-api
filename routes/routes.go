@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"ecommerce-yt/controllers"
 	"fmt"
+	"kontest-api/controllers"
 	"net/http"
 )
 

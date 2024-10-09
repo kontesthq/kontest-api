@@ -1,9 +1,9 @@
 package model
 
 import (
-	"ecommerce-yt/utils/enums"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"kontest-api/utils/enums"
 )
 
 // KontestModel represents a record in the kontests table

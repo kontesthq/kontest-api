@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"ecommerce-yt/service"
 	"encoding/json"
+	"kontest-api/service"
 	"net/http"
 	"strconv"
 	"strings"
