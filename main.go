@@ -1,6 +1,7 @@
 package main
 
 import (
+	"ecommerce-yt/database"
 	"ecommerce-yt/middleware"
 	"ecommerce-yt/routes"
 	"fmt"
@@ -9,12 +10,23 @@ import (
 )
 
 func main() {
+	// Initialize the database connection parameters
+	dbname := "kontest"
+	dbPort := "5432"
+	dbHost := "localhost"
+	user := "ayushsinghal"
+	password := ""
+	sslmode := "disable"
+
+	// Connect to the database
+	if dbErr := database.Connect(dbname, dbPort, dbHost, user, password, sslmode); dbErr != nil {
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", dbErr)
+		return
+	}
+
 	router := http.NewServeMux()
 
 	routes.RegisterRoutes(router)
-
-	v1 := http.NewServeMux()
-	v1.Handle("/v1/", http.StripPrefix("/v1", router)) // so that prefixes using v1 works
 
 	stack := middleware.CreateStack(
 		middleware.Logging,
@@ -26,8 +38,8 @@ func main() {
 	}
 
 	server := http.Server{
-		Addr:    ":" + port, // Use the field name Addr for the address
-		Handler: stack(v1),  // Use the field name Handler for the router
+		Addr:    ":" + port,    // Use the field name Addr for the address
+		Handler: stack(router), // Use the field name Handler for the router
 	}
 
 	fmt.Println("Server listening at port: " + port)
