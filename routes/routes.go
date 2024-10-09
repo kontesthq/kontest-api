@@ -26,6 +26,7 @@ func RegisterRoutes(router *http.ServeMux) {
 	router.HandleFunc("POST /users/register", controllers.SignUp)
 	router.HandleFunc("POST /users/login", controllers.SignIn)
 	router.HandleFunc("GET /kontests", controllers.GetAllKontests)
+	router.HandleFunc("DELETE /purge", controllers.PurgeMetadata)
 
 	registerHelloRoutes(router)
 }

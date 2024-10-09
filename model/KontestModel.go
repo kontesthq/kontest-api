@@ -18,6 +18,19 @@ type KontestModel struct {
 	SiteAbbreviation enums.SiteAbbreviation `json:"site_abbreviation"` // Abbreviation of the contest site
 }
 
+func NewKontestModel(name, url, startTime, endTime, location, status string) *KontestModel {
+	return &KontestModel{
+		ID:               uuid.New(),
+		Name:             name,
+		URL:              url,
+		StartTime:        startTime,
+		EndTime:          endTime,
+		Location:         location,
+		Status:           status,
+		SiteAbbreviation: enums.GetAbbreviation(location),
+	}
+}
+
 // TableName sets the table name for the KontestModel struct
 func (k *KontestModel) TableName() string {
 	return "kontests"

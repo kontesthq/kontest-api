@@ -3,13 +3,14 @@ package controllers
 import (
 	"encoding/json"
 	"kontest-api/service"
+	"kontest-api/utils"
 	"net/http"
 	"strconv"
 	"strings"
 )
 
 func GetAllKontests(w http.ResponseWriter, r *http.Request) {
-	kontestService := service.NewKontestService()
+	kontestService := service.NewKontestService(utils.GetDependencies().KontestRepository, utils.GetDependencies().MetadataRepository)
 
 	// Parse query parameters
 	rawSites := r.URL.Query().Get("sites") // Get the sites parameter as a single string
@@ -55,4 +56,12 @@ func GetAllKontests(w http.ResponseWriter, r *http.Request) {
 	// Return the contests in the response
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(contests)
+}
+
+func PurgeMetadata(w http.ResponseWriter, r *http.Request) {
+	kontestService := service.NewKontestService(utils.GetDependencies().KontestRepository, utils.GetDependencies().MetadataRepository)
+
+	kontestService.PurgeMetadata()
+
+	json.NewEncoder(w).Encode(map[string]string{"message": "Metadata purged successfully"})
 }

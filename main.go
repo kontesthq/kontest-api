@@ -5,11 +5,14 @@ import (
 	"kontest-api/database"
 	"kontest-api/middleware"
 	"kontest-api/routes"
+	"kontest-api/utils"
 	"net/http"
 	"os"
 )
 
 func main() {
+	utils.InitializeDependencies()
+
 	// Initialize the database connection parameters
 	dbname := "kontest"
 	dbPort := "5432"
