@@ -11,21 +11,9 @@ import (
 )
 
 func main() {
+	initalizeDatabase("kontest", "5432", "localhost", "postgres", "postgres", "disable")
+
 	utils.InitializeDependencies()
-
-	// Initialize the database connection parameters
-	dbname := "kontest"
-	dbPort := "5432"
-	dbHost := "localhost"
-	user := "ayushsinghal"
-	password := ""
-	sslmode := "disable"
-
-	// Connect to the database
-	if dbErr := database.Connect(dbname, dbPort, dbHost, user, password, sslmode); dbErr != nil {
-		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", dbErr)
-		return
-	}
 
 	router := http.NewServeMux()
 
@@ -50,6 +38,22 @@ func main() {
 	err := server.ListenAndServe()
 	if err != nil {
 		fmt.Println(err)
+		return
+	}
+}
+
+// Initialize the database connection with default values
+func initalizeDatabase(
+	dbname string,
+	dbPort string,
+	dbHost string,
+	user string,
+	password string,
+	sslmode string,
+) {
+
+	if dbErr := database.Connect(dbname, dbPort, dbHost, user, password, sslmode); dbErr != nil {
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", dbErr)
 		return
 	}
 }

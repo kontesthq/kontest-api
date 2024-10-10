@@ -25,15 +25,22 @@ type KontestService struct {
 	url           string
 	lastUpdatedAt time.Time
 	updateMutex   sync.Mutex
+	kontestsCache []model.KontestModel // Cache variable
 	isUpdating    sync.Mutex
 }
 
 func NewKontestService(kontestRepository repository.KontestRepository, metadataRepository repository.MetadataRepository) *KontestService {
+	var kontests []model.KontestModel
+
+	// Fetch contests from the database
+	database.GetDB().Find(&kontests)
+
 	return &KontestService{
 		kontestRepo:   kontestRepository,
 		metadataRepo:  metadataRepository,
 		url:           "https://clist.by",
 		lastUpdatedAt: metadataRepository.GetLastUpdatedAt(),
+		kontestsCache: kontests, // Initialize the cache with fetched contests
 	}
 }
 
@@ -117,6 +124,9 @@ func (s *KontestService) fetchHtml() {
 	s.kontestRepo.DeleteAll()
 	s.saveKontestsToDB(kontests)
 
+	// Update cache
+	s.kontestsCache = kontests
+
 	// Update metadata
 	s.metadataRepo.Save(model.NewMetadata())
 	s.lastUpdatedAt = time.Now()
@@ -187,20 +197,19 @@ func (s *KontestService) saveKontestsToDB(kontests []model.KontestModel) {
 func (s *KontestService) GetContests(page, perPage int) ([]map[string]string, error) {
 	s.fetchHtmlIfNeeded()
 
-	var contests []model.KontestModel
-
 	// Calculate offset for pagination
 	offset := (page - 1) * perPage
 
-	// Query the database for contests
-	if err := database.GetDB().Offset(offset).Limit(perPage).Find(&contests).Error; err != nil {
-		return nil, err
+	// Limit the result size to perPage
+	if offset >= len(s.kontestsCache) {
+		return []map[string]string{}, nil // Return an empty result if the offset is out of range
 	}
 
 	// Convert to a slice of maps for easier JSON serialization
-	result := make([]map[string]string, len(contests))
-	for i, contest := range contests {
-		result[i] = map[string]string{
+	result := make([]map[string]string, 0, perPage) // Initialize with capacity of perPage
+	for i := offset; i < offset+perPage && i < len(s.kontestsCache); i++ {
+		contest := s.kontestsCache[i]
+		result = append(result, map[string]string{
 			"id":                contest.ID.String(),
 			"name":              contest.Name,
 			"url":               contest.URL,
@@ -209,7 +218,7 @@ func (s *KontestService) GetContests(page, perPage int) ([]map[string]string, er
 			"location":          contest.Location,
 			"status":            contest.Status,
 			"site_abbreviation": string(contest.SiteAbbreviation), // Assuming it's a string type
-		}
+		})
 	}
 
 	return result, nil
@@ -217,21 +226,36 @@ func (s *KontestService) GetContests(page, perPage int) ([]map[string]string, er
 
 // GetContestsOfSpecificSites retrieves contests for specific sites with pagination
 func (s *KontestService) GetContestsOfSpecificSites(sites []string, page, perPage int) ([]map[string]string, error) {
-	s.fetchHtmlIfNeeded()
-
-	var contests []model.KontestModel
+	s.fetchHtmlIfNeeded() // Ensure contests are fetched if needed
 
 	// Calculate offset for pagination
 	offset := (page - 1) * perPage
 
-	// Query the database for contests based on specific sites
-	if err := database.GetDB().Where("site_abbreviation IN ?", sites).Offset(offset).Limit(perPage).Find(&contests).Error; err != nil {
-		return nil, err
+	var contests []model.KontestModel
+
+	// Filter contests from the cache based on specific sites
+	for _, contest := range s.kontestsCache {
+		for _, site := range sites {
+			if string(contest.SiteAbbreviation) == site {
+				contests = append(contests, contest)
+				break
+			}
+		}
+	}
+
+	// Apply pagination
+	start := offset
+	end := offset + perPage
+	if start >= len(contests) {
+		return []map[string]string{}, nil // Return an empty result if the offset is beyond available contests
+	}
+	if end > len(contests) {
+		end = len(contests) // Adjust end if it exceeds the slice length
 	}
 
 	// Convert to a slice of maps for easier JSON serialization
-	result := make([]map[string]string, len(contests))
-	for i, contest := range contests {
+	result := make([]map[string]string, end-start)
+	for i, contest := range contests[start:end] {
 		result[i] = map[string]string{
 			"id":                contest.ID.String(),
 			"name":              contest.Name,
@@ -240,7 +264,7 @@ func (s *KontestService) GetContestsOfSpecificSites(sites []string, page, perPag
 			"end_time":          contest.EndTime,
 			"location":          contest.Location,
 			"status":            contest.Status,
-			"site_abbreviation": string(contest.SiteAbbreviation), // Assuming it's a string type
+			"site_abbreviation": string(contest.SiteAbbreviation),
 		}
 	}
 

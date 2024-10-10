@@ -10,7 +10,7 @@ import (
 )
 
 func GetAllKontests(w http.ResponseWriter, r *http.Request) {
-	kontestService := service.NewKontestService(utils.GetDependencies().KontestRepository, utils.GetDependencies().MetadataRepository)
+	kontestService := utils.GetDependencies().KontestService
 
 	// Parse query parameters
 	rawSites := r.URL.Query().Get("sites") // Get the sites parameter as a single string
