@@ -23,9 +23,9 @@ func HelloDELETEHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func RegisterRoutes(router *http.ServeMux) {
-	router.HandleFunc("POST /users/register", controllers.SignUp)
-	router.HandleFunc("POST /users/login", controllers.SignIn)
 	router.HandleFunc("GET /kontests", controllers.GetAllKontests)
+	router.HandleFunc("GET /health", controllers.HealthCheck)
+	router.HandleFunc("GET /get_supported_sites", controllers.GetSupportedSites)
 	router.HandleFunc("DELETE /purge", controllers.PurgeMetadata)
 
 	registerHelloRoutes(router)

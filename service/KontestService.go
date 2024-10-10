@@ -301,5 +301,7 @@ func (s *KontestService) fetchHtmlIfNeeded() {
 }
 
 func (s *KontestService) PurgeMetadata() {
-	database.GetDB().Unscoped().Delete(&model.Metadata{}, "1=1")
+	// a very long ago time
+	s.lastUpdatedAt = time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
+	fmt.Println(s.lastUpdatedAt)
 }

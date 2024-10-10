@@ -2,8 +2,8 @@ package controllers
 
 import (
 	"encoding/json"
-	"kontest-api/service"
 	"kontest-api/utils"
+	"kontest-api/utils/enums"
 	"net/http"
 	"strconv"
 	"strings"
@@ -59,9 +59,20 @@ func GetAllKontests(w http.ResponseWriter, r *http.Request) {
 }
 
 func PurgeMetadata(w http.ResponseWriter, r *http.Request) {
-	kontestService := service.NewKontestService(utils.GetDependencies().KontestRepository, utils.GetDependencies().MetadataRepository)
+	kontestService := utils.GetDependencies().KontestService
 
 	kontestService.PurgeMetadata()
 
 	json.NewEncoder(w).Encode(map[string]string{"message": "Metadata purged successfully"})
+}
+
+func HealthCheck(writer http.ResponseWriter, request *http.Request) {
+	writer.WriteHeader(http.StatusOK)
+	writer.Write([]byte("Service is healthy"))
+}
+
+func GetSupportedSites(writer http.ResponseWriter, request *http.Request) {
+	supportedSites := enums.GetAllAbbreviations()
+	writer.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(writer).Encode(supportedSites)
 }
