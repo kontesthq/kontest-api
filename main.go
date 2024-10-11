@@ -28,7 +28,9 @@ func main() {
 		log.Fatalf("Failed to convert port to integer: %v", err)
 	}
 
-	utils.RegisterService(portInt, serviceID)
+	consulService := utils.NewConsulService()
+	consulService.Start(portInt, serviceID)
+
 	defer utils.DeregisterService(serviceID) // Ensure the service is deregistered when exiting
 
 	utils.InitalizeDatabase("kontest", "5432", "localhost", "postgres", "postgres", "disable")
