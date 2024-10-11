@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	consulServiceManager "github.com/ayushs-2k4/go-consul-service-manager"
 	loadbalancer "github.com/ayushs-2k4/go-load-balancer"
 	"io"
 	"kontest-api/middleware"
@@ -27,7 +28,7 @@ func main() {
 		log.Fatalf("Failed to convert port to integer: %v", err)
 	}
 
-	consulService := utils.NewConsulService("localhost", 5150)
+	consulService := consulServiceManager.NewConsulService("localhost", 5150)
 	consulService.Start(portInt, serviceName)
 
 	//checkingLoadBalancer()

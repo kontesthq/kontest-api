@@ -4,9 +4,9 @@ go 1.23.2
 
 require (
 	github.com/PuerkitoBio/goquery v1.10.0
+	github.com/ayushs-2k4/go-consul-service-manager v0.1.0
 	github.com/ayushs-2k4/go-load-balancer v0.1.4
 	github.com/google/uuid v1.6.0
-	github.com/hashicorp/consul/api v1.29.4
 	gorm.io/driver/postgres v1.5.9
 	gorm.io/gorm v1.25.12
 )
@@ -15,6 +15,7 @@ require (
 	github.com/andybalholm/cascadia v1.3.2 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/fatih/color v1.16.0 // indirect
+	github.com/hashicorp/consul/api v1.29.4 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-hclog v1.5.0 // indirect
