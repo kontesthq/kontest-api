@@ -16,6 +16,7 @@ import (
 )
 
 var (
+	applicationHost = "localhost"   // Default value for local development
 	applicationPort = "5151"        // Default value for local development
 	serviceName     = "KONTEST-API" // Service name for Service Registry
 	consulHost      = "localhost"   // Default value for local development
@@ -30,6 +31,11 @@ var (
 )
 
 func initializeVariables() {
+	// Attempt to read the KONTEST_API_SERVER_HOST environment variable
+	if host := os.Getenv("KONTEST_API_SERVER_HOST"); host != "" {
+		applicationHost = host // Override with the environment variable if set
+	}
+
 	// Attempt to read the KONTEST_API_SERVER_PORT environment variable
 	if port := os.Getenv("KONTEST_API_SERVER_PORT"); port != "" {
 		applicationPort = port // Override with the environment variable if set
@@ -87,7 +93,7 @@ func main() {
 	}
 
 	consulService := consulServiceManager.NewConsulService(consulHost, consulPort)
-	consulService.Start(portInt, serviceName)
+	consulService.Start(applicationHost, portInt, serviceName)
 
 	//checkingLoadBalancer()
 	//checkLoadBalancerUserStatsService()

@@ -4,7 +4,7 @@ go 1.23.2
 
 require (
 	github.com/PuerkitoBio/goquery v1.10.0
-	github.com/ayushs-2k4/go-consul-service-manager v0.1.0
+	github.com/ayushs-2k4/go-consul-service-manager v0.1.1
 	github.com/ayushs-2k4/go-load-balancer v0.1.4
 	github.com/google/uuid v1.6.0
 	gorm.io/driver/postgres v1.5.9
