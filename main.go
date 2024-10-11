@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"kontest-api/middleware"
 	"kontest-api/routes"
@@ -9,13 +8,10 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/signal"
 	"strconv"
-	"syscall"
-	"time"
 )
 
-var serviceID = "KONTEST-API"
+var serviceName = "KONTEST-API"
 
 func main() {
 	port := os.Getenv("KONTEST_API_SERVER_PORT")
@@ -29,9 +25,7 @@ func main() {
 	}
 
 	consulService := utils.NewConsulService()
-	consulService.Start(portInt, serviceID)
-
-	defer utils.DeregisterService(serviceID) // Ensure the service is deregistered when exiting
+	consulService.Start(portInt, serviceName)
 
 	utils.InitalizeDatabase("kontest", "5432", "localhost", "postgres", "postgres", "disable")
 
@@ -50,9 +44,6 @@ func main() {
 		Handler: stack(router), // Use the field name Handler for the router
 	}
 
-	// Handle termination signals
-	handleShutdown(&server)
-
 	fmt.Println("Server listening at port: " + port)
 
 	err = server.ListenAndServe()
@@ -60,22 +51,4 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-}
-
-func handleShutdown(server *http.Server) {
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		<-sigs
-		log.Println("Shutting down server...")
-		// Create a context with a timeout to allow for graceful shutdown
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		if err := server.Shutdown(ctx); err != nil {
-			log.Fatalf("Server shutdown failed: %+v", err)
-		}
-		log.Println("Server exited properly")
-	}()
 }

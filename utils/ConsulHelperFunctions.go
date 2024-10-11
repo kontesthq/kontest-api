@@ -3,6 +3,9 @@ package utils
 import (
 	"github.com/hashicorp/consul/api"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -27,9 +30,18 @@ func NewConsulService() *ConsulService {
 	}
 }
 
-func (c *ConsulService) Start(port int, serviceID string) {
-	c.registerService(port, serviceID)
-	go c.updateHealthCheck()
+func (c *ConsulService) Start(port int, serviceName string) {
+	serviceID := serviceName + "-" + "1"
+
+	// Ensure the service is deregistered when the application shuts down
+	defer deregisterService(serviceID) // Will run when Start() exits
+
+	// Register service and start health check
+	c.registerService(port, serviceName, serviceID)
+	go c.updateHealthCheck(serviceID)
+
+	// Set up signal handling to wait for termination signals
+	c.handleShutdown(serviceID)
 }
 
 const (
@@ -37,7 +49,7 @@ const (
 	checkID = "checkAlive"
 )
 
-func (c *ConsulService) registerService(port int, serviceID string) {
+func (c *ConsulService) registerService(port int, serviceName string, serviceID string) {
 	// Configure Consul client with the correct address and port
 	config := api.DefaultConfig()
 	config.Address = "127.0.0.1:5150"
@@ -46,20 +58,27 @@ func (c *ConsulService) registerService(port int, serviceID string) {
 		DeregisterCriticalServiceAfter: ttl.String(),
 		TLSSkipVerify:                  true,
 		TTL:                            ttl.String(),
-		CheckID:                        checkID,
+		CheckID:                        serviceID + "-" + checkID,
 	}
 
 	// Register a service with Connect sidecar proxy enabled
 	serviceRegistration := &api.AgentServiceRegistration{
 		ID:      serviceID,
-		Name:    "my-cluster",
+		Name:    serviceName,
 		Tags:    []string{"kontest-api"},
 		Address: "127.0.0.1",
 		Port:    port,
 		Check:   check,
-		//Connect: &api.AgentServiceConnect{ // Enable Consul Connect (Service Mesh)
-		//	SidecarService: &api.AgentServiceConnectProxyConfig{},
-		//},
+		Connect: &api.AgentServiceConnect{ // Enable Consul Connect (Service Mesh)
+			Native: false,
+			SidecarService: &api.AgentServiceRegistration{
+				Name:    serviceName + "-sidecar",
+				Tags:    []string{"sidecar"},
+				Address: "127.0.0.1",
+				Port:    20000,
+				Check:   check,
+			},
+		},
 	}
 
 	err := c.consulClient.Agent().ServiceRegister(serviceRegistration)
@@ -70,7 +89,7 @@ func (c *ConsulService) registerService(port int, serviceID string) {
 	log.Println("Service registered with Consul on port 5150")
 }
 
-func DeregisterService(serviceID string) {
+func deregisterService(serviceID string) {
 	config := api.DefaultConfig()
 	config.Address = "127.0.0.1:5150" // Ensure the correct address and port are used
 
@@ -89,11 +108,12 @@ func DeregisterService(serviceID string) {
 	log.Println(serviceID + " Service deregistered from Consul")
 }
 
-func (c *ConsulService) updateHealthCheck() {
+func (c *ConsulService) updateHealthCheck(serviceID string) {
 	ticker := time.NewTicker(ttl / 2)
+	finalID := serviceID + "-" + checkID
 
 	for {
-		err := c.consulClient.Agent().UpdateTTL(checkID, "Still alive", api.HealthPassing)
+		err := c.consulClient.Agent().UpdateTTL(finalID, "Still alive", api.HealthPassing)
 
 		if err != nil {
 			log.Fatalf("Failed to update TTL: %v", err)
@@ -101,4 +121,22 @@ func (c *ConsulService) updateHealthCheck() {
 
 		<-ticker.C
 	}
+}
+
+// handleShutdown waits for termination signals and calls deregisterService
+func (c *ConsulService) handleShutdown(serviceID string) {
+	// Create a channel to listen for OS signals
+	sigChannel := make(chan os.Signal, 1)
+	signal.Notify(sigChannel, syscall.SIGINT, syscall.SIGTERM)
+
+	// Block until a signal is received
+	sig := <-sigChannel
+
+	// Log and deregister the service
+	log.Printf("Received signal: %s, deregistering service...", sig)
+	deregisterService(serviceID)
+
+	// Exit the application gracefully
+	log.Println("Exiting application")
+	os.Exit(0)
 }
