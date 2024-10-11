@@ -8,7 +8,7 @@ import (
 
 // KontestModel represents a record in the kontests table
 type KontestModel struct {
-	ID               uuid.UUID `gorm:"type:uuid;primaryKey;default:uuid_generate_v7()" json:"id"` // Use UUID type as primary key
+	ID               uuid.UUID `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()" json:"id"` // Use UUID type as primary key
 	Name             string    `gorm:"not null" json:"name"`
 	URL              string    `json:"url"`               // Actual URL of the contest
 	StartTime        string    `json:"start_time"`        // Contest start time (stored as string)
