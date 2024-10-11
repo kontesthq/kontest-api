@@ -15,13 +15,18 @@ import (
 	"time"
 )
 
-var serviceName = "KONTEST-API"
-
-// Declare variables instead of constants for dynamic assignment
 var (
-	applicationPort = "5151"      // Default value for local development
-	consulHost      = "localhost" // Default value for local development
-	consulPort      = 5150        // Port as a constant (can be constant if it won't change)
+	applicationPort = "5151"        // Default value for local development
+	serviceName     = "KONTEST-API" // Service name for Service Registry
+	consulHost      = "localhost"   // Default value for local development
+	consulPort      = 5150          // Port as a constant (can be constant if it won't change)
+
+	dbHost           = "localhost"
+	dbPort           = "5432"
+	dbName           = "kontest"
+	dbUser           = "ayushsinghal"
+	dbPassword       = ""
+	isSSLModeEnabled = false
 )
 
 func initializeVariables() {
@@ -41,6 +46,36 @@ func initializeVariables() {
 			consulPort = portInt // Override with the environment variable if set and valid
 		}
 	}
+
+	// Attempt to read the DB_HOST environment variable
+	if host := os.Getenv("DB_HOST"); host != "" {
+		dbHost = host // Override with the environment variable if set
+	}
+
+	// Attempt to read the DB_PORT environment variable
+	if port := os.Getenv("DB_PORT"); port != "" {
+		dbPort = port // Override with the environment variable if set
+	}
+
+	// Attempt to read the DB_NAME environment variable
+	if name := os.Getenv("DB_NAME"); name != "" {
+		dbName = name // Override with the environment variable if set
+	}
+
+	// Attempt to read the DB_USER environment variable
+	if user := os.Getenv("DB_USER"); user != "" {
+		dbUser = user // Override with the environment variable if set
+	}
+
+	// Attempt to read the DB_PASSWORD environment variable
+	if password := os.Getenv("DB_PASSWORD"); password != "" {
+		dbPassword = password // Override with the environment variable if set
+	}
+
+	// Attempt to read the DB_SSL_MODE environment variable
+	if sslMode := os.Getenv("DB_SSL_MODE"); sslMode != "" {
+		isSSLModeEnabled = sslMode == "enable"
+	}
 }
 
 func main() {
@@ -57,7 +92,7 @@ func main() {
 	//checkingLoadBalancer()
 	//checkLoadBalancerUserStatsService()
 
-	utils.InitalizeDatabase("kontest", "5432", "localhost", "postgres", "postgres", "disable")
+	utils.InitalizeDatabase(dbPort, dbHost, dbUser, dbPassword, dbName, map[bool]string{true: "enable", false: "disable"}[isSSLModeEnabled])
 
 	utils.InitializeDependencies()
 

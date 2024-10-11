@@ -14,11 +14,11 @@ import (
 
 // InitalizeDatabase Initialize the database connection with default values
 func InitalizeDatabase(
-	dbname string,
 	dbPort string,
 	dbHost string,
 	user string,
 	password string,
+	dbname string,
 	sslmode string,
 ) {
 
