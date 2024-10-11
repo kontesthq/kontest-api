@@ -33,8 +33,6 @@ func main() {
 	registerService(portInt)
 	defer deregisterService() // Ensure the service is deregistered when exiting
 
-	log.Println("Service registered with Consul on port 5150")
-
 	initalizeDatabase("kontest", "5432", "localhost", "postgres", "postgres", "disable")
 
 	utils.InitializeDependencies()
@@ -106,6 +104,8 @@ func registerService(port int) {
 	if err != nil {
 		log.Fatalf("Failed to register service: %v", err)
 	}
+
+	log.Println("Service registered with Consul on port 5150")
 }
 
 func deregisterService() {
