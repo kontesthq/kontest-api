@@ -26,17 +26,12 @@ func GetAllKontests(w http.ResponseWriter, r *http.Request) {
 	// Convert page and perPage to integers
 	page, err := strconv.Atoi(pageStr)
 	if err != nil || page <= 0 {
-		http.Error(w, "Invalid page number", http.StatusBadRequest)
-		return
+		page = 1
 	}
 
-	perPage := 10 // Default perPage
-	if perPageStr != "" {
-		perPage, err = strconv.Atoi(perPageStr)
-		if err != nil || perPage <= 0 {
-			http.Error(w, "Invalid per_page number", http.StatusBadRequest)
-			return
-		}
+	perPage, err := strconv.Atoi(perPageStr)
+	if err != nil || perPage <= 0 {
+		perPage = 10
 	}
 
 	var contests []map[string]string

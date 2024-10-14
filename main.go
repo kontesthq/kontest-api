@@ -5,6 +5,7 @@ import (
 	consulServiceManager "github.com/ayushs-2k4/go-consul-service-manager"
 	loadbalancer "github.com/ayushs-2k4/go-load-balancer"
 	"io"
+	"kontest-api/database"
 	"kontest-api/middleware"
 	"kontest-api/routes"
 	"kontest-api/utils"
@@ -98,7 +99,7 @@ func main() {
 	//checkingLoadBalancer()
 	//checkLoadBalancerUserStatsService()
 
-	utils.InitalizeDatabase(dbPort, dbHost, dbUser, dbPassword, dbName, map[bool]string{true: "enable", false: "disable"}[isSSLModeEnabled])
+	database.InitalizeDatabase(dbPort, dbHost, dbUser, dbPassword, dbName, map[bool]string{true: "enable", false: "disable"}[isSSLModeEnabled])
 
 	utils.InitializeDependencies()
 
