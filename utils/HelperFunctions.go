@@ -2,7 +2,7 @@ package utils
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,14 +16,16 @@ func HandleShutdown(server *http.Server) {
 
 	go func() {
 		<-sigs
-		log.Println("Shutting down server...")
+		slog.Info("Shutting down server...")
 		// Create a context with a timeout to allow for graceful shutdown
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		if err := server.Shutdown(ctx); err != nil {
-			log.Fatalf("Server shutdown failed: %+v", err)
+			slog.Error("Server shutdown failed", slog.String("error", err.Error()))
+			os.Exit(1)
 		}
-		log.Println("Server exited properly")
+
+		slog.Info("Server exited properly")
 	}()
 }

@@ -9,9 +9,10 @@ import (
 	"kontest-api/middleware"
 	"kontest-api/routes"
 	"kontest-api/utils"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 )
@@ -35,7 +36,8 @@ func initializeVariables() {
 	// Get the hostname of the machine
 	hostname, err := os.Hostname()
 	if err != nil {
-		log.Fatalf("Error fetching hostname: %v", err)
+		slog.Error("Error fetching hostname", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 
 	// Attempt to read the KONTEST_API_SERVER_HOST environment variable
@@ -49,9 +51,11 @@ func initializeVariables() {
 	if port := os.Getenv("KONTEST_API_SERVER_PORT"); port != "" {
 		parsedPort, err := strconv.Atoi(port)
 		if err != nil {
-			log.Fatalf("Invalid port value: %v", err)
+			slog.Error("Invalid port value", slog.String("error", err.Error()), slog.String("port", port))
+			os.Exit(1) // Exit the program with a non-zero status code
 		}
 		applicationPort = parsedPort // Override with the environment variable if set
+		slog.Info("Application port set from environment variable", slog.Int("applicationPort", applicationPort))
 	}
 
 	// Attempt to read the CONSUL_ADDRESS environment variable
@@ -97,7 +101,52 @@ func initializeVariables() {
 	}
 }
 
+func setupLogging() *os.File {
+	LOG_FILE := os.Getenv("LOG_FILE")
+
+	if LOG_FILE == "" {
+		LOG_FILE = "tmp/logs/logs.log"
+	}
+
+	// Get the directory from the log file path
+	logDir := filepath.Dir(LOG_FILE)
+
+	// Create the directory if it doesn't exist
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		slog.Error("Failed to create log directory", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	handlerOptions := &slog.HandlerOptions{
+		AddSource: true,
+	}
+	// Open or create a log file
+	logFile, err := os.OpenFile(LOG_FILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		// Handle error if the log file cannot be opened or created
+		slog.Error("Failed to open log file", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	w := io.MultiWriter(os.Stdout, logFile)
+
+	// Configure slog to output JSON
+	slog.SetDefault(slog.New(slog.NewJSONHandler(w, handlerOptions)))
+
+	// Return the log file to close it in the main function
+	return logFile
+}
+
 func main() {
+	// Set up logging and capture the log file
+	logFile := setupLogging()
+
+	// Ensure the log file is closed when the program exits
+	defer logFile.Close()
+
+	// Log server restart with a timestamp
+	slog.Info("Server restarted", slog.Time("time", time.Now()))
+
 	initializeVariables()
 
 	consulService := consulservicemanager.NewConsulService(consulHost, consulPort)
@@ -123,12 +172,12 @@ func main() {
 		Handler: stack(router),                       // Use the field name Handler for the router
 	}
 
-	fmt.Println("Server listening at applicationPort: " + strconv.Itoa(applicationPort))
+	slog.Info("Server listening", slog.Int("port", applicationPort))
 
 	err := server.ListenAndServe()
 	if err != nil {
-		fmt.Println(err)
-		return
+		slog.Error("Failed to start server", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 }
 
@@ -136,73 +185,66 @@ func checkingLoadBalancer() {
 	lb, err := loadbalancer.GetLoadBalancer(serviceName, consulHost, consulPort)
 
 	if err != nil {
-		log.Fatalf("Failed to create load balancer: %v", err)
+		slog.Error("Failed to create load balancer", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 
-	// Choose a random instance
 	instance, err := lb.ChooseInstance()
 	if err != nil || instance == nil {
-		log.Fatalf("Failed to choose instance: %v", err)
+		slog.Error("Failed to choose instance", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 
-	// Print the instance's address
-	fmt.Printf("Instance address: %s:%d\n", instance.Address, instance.Port)
+	slog.Info("Chosen instance", slog.String("address", instance.Address), slog.Int("port", instance.Port))
 
-	// Construct the URL for the chosen instance
 	url := fmt.Sprintf("http://%s:%d/kontests?page=1&per_page=10", instance.Address, instance.Port)
-	fmt.Printf("Calling URL: %s\n", url)
 
-	// Make the HTTP GET request to the service
 	client := &http.Client{
-		Timeout: 5 * time.Second, // Set a timeout to avoid hanging requests
+		Timeout: 5 * time.Second,
 	}
 
-	// Wait for 5 seconds without blocking the main thread
 	go func() {
-		fmt.Println("Waiting for 5 seconds...")
 		time.Sleep(5 * time.Second)
-		fmt.Println("5 seconds passed, making HTTP request.")
-
-		// Perform the HTTP request in the Goroutine
 		resp, err := client.Get(url)
 		if err != nil {
-			log.Fatalf("Failed to make HTTP request: %v", err)
+			slog.Error("Failed to make HTTP request", slog.String("error", err.Error()))
+			os.Exit(1)
 		}
 		defer resp.Body.Close()
 
-		// Read the response
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			log.Fatalf("Failed to read response: %v", err)
+			slog.Error("Failed to read response", slog.String("error", err.Error()))
+			os.Exit(1)
 		}
 
-		// Print the response
-		fmt.Printf("Response from instance: %s\n", body)
+		slog.Info("Response from instance", slog.String("response", string(body)))
 	}()
 
-	// Continue doing other work in the main thread if needed
-	fmt.Println("Main thread is not blocked, continuing execution...")
+	slog.Info("Main thread is continuing execution...")
 }
 
 func checkLoadBalancerUserStatsService() {
 	lb, err := loadbalancer.GetLoadBalancer("KONTEST-USER-STATS-SERVICE", consulHost, consulPort)
 
 	if err != nil {
-		log.Fatalf("Failed to create load balancer: %v", err)
+		slog.Error("Failed to create load balancer", slog.String("error", err.Error()))
+		os.Exit(1) // Exit with an error
 	}
 
 	// Choose a random instance
 	instance, err := lb.ChooseInstance()
 	if err != nil || instance == nil {
-		log.Fatalf("Failed to choose instance: %v", err)
+		slog.Error("Failed to choose instance", slog.String("error", err.Error()))
+		os.Exit(1) // Exit with an error
 	}
 
-	// Print the instance's address
-	fmt.Printf("Instance address: %s:%d\n", instance.Address, instance.Port)
+	// Log the instance's address
+	slog.Info("Instance chosen", slog.String("address", instance.Address), slog.Int("port", instance.Port))
 
 	// Construct the URL for the chosen instance
 	url := fmt.Sprintf("http://%s:%d/codechef_user?username=ayushs_2k4", instance.Address, instance.Port)
-	fmt.Printf("Calling URL: %s\n", url)
+	slog.Info("Calling URL", slog.String("url", url))
 
 	// Make the HTTP GET request to the service
 	client := &http.Client{
@@ -213,27 +255,29 @@ func checkLoadBalancerUserStatsService() {
 
 	// Wait for some time without blocking the main thread
 	go func() {
-		fmt.Println("Waiting for" + strconv.Itoa(secondsToWait) + " seconds...")
+		slog.Info("Waiting before making the request", slog.Int("seconds", secondsToWait))
 		time.Sleep(time.Duration(secondsToWait) * time.Second)
-		fmt.Println(strconv.Itoa(secondsToWait) + " seconds passed, making HTTP request.")
+		slog.Info("Making HTTP request", slog.Int("seconds waited", secondsToWait))
 
 		// Perform the HTTP request in the Goroutine
 		resp, err := client.Get(url)
 		if err != nil {
-			log.Fatalf("Failed to make HTTP request: %v", err)
+			slog.Error("Failed to make HTTP request", slog.String("error", err.Error()))
+			os.Exit(1)
 		}
 		defer resp.Body.Close()
 
 		// Read the response
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			log.Fatalf("Failed to read response: %v", err)
+			slog.Error("Failed to read response", slog.String("error", err.Error()))
+			os.Exit(1)
 		}
 
-		// Print the response
-		fmt.Printf("Response from instance: %s\n", body)
+		// Log the response
+		slog.Info("Response from instance", slog.String("response", string(body)))
 	}()
 
-	// Continue doing other work in the main thread if needed
-	fmt.Println("Main thread is not blocked, continuing execution...")
+	// Log that the main thread is continuing execution
+	slog.Info("Main thread is not blocked, continuing execution...")
 }
