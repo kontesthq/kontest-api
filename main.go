@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	consulServiceManager "github.com/ayushs-2k4/go-consul-service-manager"
-	loadbalancer "github.com/ayushs-2k4/go-load-balancer"
+	"github.com/ayushs-2k4/go-consul-service-manager/consulservicemanager"
+	"github.com/ayushs-2k4/go-load-balancer/loadbalancer"
 	"io"
 	"kontest-api/database"
 	"kontest-api/middleware"
@@ -18,7 +18,7 @@ import (
 
 var (
 	applicationHost = "localhost"   // Default value for local development
-	applicationPort = "5151"        // Default value for local development
+	applicationPort = 5151          // Default value for local development
 	serviceName     = "KONTEST-API" // Service name for Service Registry
 	consulHost      = "localhost"   // Default value for local development
 	consulPort      = 5150          // Port as a constant (can be constant if it won't change)
@@ -32,14 +32,26 @@ var (
 )
 
 func initializeVariables() {
+	// Get the hostname of the machine
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Fatalf("Error fetching hostname: %v", err)
+	}
+
 	// Attempt to read the KONTEST_API_SERVER_HOST environment variable
 	if host := os.Getenv("KONTEST_API_SERVER_HOST"); host != "" {
 		applicationHost = host // Override with the environment variable if set
+	} else {
+		applicationHost = hostname // Use the machine's hostname if the env var is not set
 	}
 
 	// Attempt to read the KONTEST_API_SERVER_PORT environment variable
 	if port := os.Getenv("KONTEST_API_SERVER_PORT"); port != "" {
-		applicationPort = port // Override with the environment variable if set
+		parsedPort, err := strconv.Atoi(port)
+		if err != nil {
+			log.Fatalf("Invalid port value: %v", err)
+		}
+		applicationPort = parsedPort // Override with the environment variable if set
 	}
 
 	// Attempt to read the CONSUL_ADDRESS environment variable
@@ -88,13 +100,8 @@ func initializeVariables() {
 func main() {
 	initializeVariables()
 
-	portInt, err := strconv.Atoi(applicationPort)
-	if err != nil {
-		log.Fatalf("Failed to convert applicationPort to integer: %v", err)
-	}
-
-	consulService := consulServiceManager.NewConsulService(consulHost, consulPort)
-	consulService.Start(applicationHost, portInt, serviceName)
+	consulService := consulservicemanager.NewConsulService(consulHost, consulPort)
+	consulService.Start(applicationHost, applicationPort, serviceName, []string{})
 
 	//checkingLoadBalancer()
 	//checkLoadBalancerUserStatsService()
@@ -112,13 +119,13 @@ func main() {
 	)
 
 	server := http.Server{
-		Addr:    ":" + applicationPort, // Use the field name Addr for the address
-		Handler: stack(router),         // Use the field name Handler for the router
+		Addr:    ":" + strconv.Itoa(applicationPort), // Use the field name Addr for the address
+		Handler: stack(router),                       // Use the field name Handler for the router
 	}
 
-	fmt.Println("Server listening at applicationPort: " + applicationPort)
+	fmt.Println("Server listening at applicationPort: " + strconv.Itoa(applicationPort))
 
-	err = server.ListenAndServe()
+	err := server.ListenAndServe()
 	if err != nil {
 		fmt.Println(err)
 		return
