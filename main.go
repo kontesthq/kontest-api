@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/ayushs-2k4/go-consul-service-manager/consulservicemanager"
 	"github.com/ayushs-2k4/go-load-balancer/loadbalancer"
+	"github.com/kontesthq/go-consul-service-manager/consulservicemanager"
 	"io"
 	"kontest-api/database"
 	"kontest-api/middleware"
