@@ -24,3 +24,9 @@ go.work
 
 # Ignore execuables
 bin/
+
+# Air
+/tmp
+
+# logs
+*.log

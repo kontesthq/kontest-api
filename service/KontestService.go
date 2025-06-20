@@ -3,13 +3,13 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"io"
 	"kontest-api/database"
 	"kontest-api/model"
 	"kontest-api/repository"
 	"log"
+	"log/slog"
 	"net/http"
 	"sort"
 	"strings"
@@ -50,7 +50,7 @@ func (s *KontestService) fetchHtml() {
 
 	// Check if an update is needed
 	if time.Since(s.lastUpdatedAt) < updateInterval {
-		log.Println("Update is not required.")
+		slog.Info("Update is not required.")
 		return
 	}
 
@@ -79,7 +79,7 @@ func (s *KontestService) fetchHtml() {
 		return
 	}
 
-	log.Println("Fetched HTML content successfully.")
+	slog.Info("Fetched HTML content successfully.")
 
 	kontests := s.parseContests(string(body))
 
@@ -142,19 +142,17 @@ func (s *KontestService) parseContests(html string) []model.KontestModel {
 	}
 
 	k := doc.Find("tr.contest")
-	fmt.Println("Total contest rows found:", k.Length())
+	slog.Info("Total contest rows found", slog.Int("contest_rows", k.Length()))
 
 	k.Each(func(i int, s *goquery.Selection) {
 		// Extracting specific fields for each contest
-		startTime := s.Find("td.start-time a").Text()
-		duration := s.Find("td.duration").Text()
+		_ = s.Find("td.start-time a").Text()
+		_ = s.Find("td.duration").Text()
 		name := s.Find("td.event a.title-search").Text()
 		desc, exists := s.Find("a.data-ace").Attr("data-ace")
 
-		println(startTime, duration, name, desc, exists)
-
 		if !exists {
-			log.Println("data-ace attribute not found for contest:", name)
+			slog.Error("data-ace attribute not found for contest:", slog.String("name", name))
 			return
 		}
 
@@ -171,7 +169,7 @@ func (s *KontestService) parseContests(html string) []model.KontestModel {
 		}
 
 		if err := json.Unmarshal([]byte(desc), &dataAce); err != nil {
-			log.Printf("Failed to unmarshal JSON: %v\n", err)
+			slog.Error("Failed to unmarshal JSON", slog.String("error", err.Error()))
 			return
 		}
 
@@ -183,7 +181,7 @@ func (s *KontestService) parseContests(html string) []model.KontestModel {
 		kontestModels = append(kontestModels, *kontest)
 	})
 
-	log.Println("Parsed contests successfully.")
+	slog.Info("Parsed contests successfully")
 	return kontestModels
 }
 
@@ -288,7 +286,7 @@ func (s *KontestService) fetchHtmlIfNeeded() {
 	if s.shouldUpdate() {
 		// Try to lock for updating
 		if !s.tryUpdate() {
-			log.Println("Update is already in progress by another thread.")
+			slog.Warn("Update is already in progress by another thread.")
 			return
 		}
 
@@ -296,12 +294,11 @@ func (s *KontestService) fetchHtmlIfNeeded() {
 		defer s.isUpdating.Unlock() // Ensure that we unlock even if an error occurs
 		s.fetchHtml()               // This will perform the fetching and updating logic
 	} else {
-		log.Println("Update is not required.")
+		slog.Info("Update is not required.")
 	}
 }
 
 func (s *KontestService) PurgeMetadata() {
 	// a very long ago time
 	s.lastUpdatedAt = time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
-	fmt.Println(s.lastUpdatedAt)
 }

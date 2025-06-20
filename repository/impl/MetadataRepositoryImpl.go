@@ -22,12 +22,22 @@ func (repo *MetadataRepositoryImpl) Save(metadata *model.Metadata) {
 	}
 }
 
+func (repo *MetadataRepositoryImpl) SaveNewMetadata() {
+	metadata := model.Metadata{
+		ID:            "metadata",
+		LastUpdatedAt: time.Now(),
+	}
+
+	repo.Save(&metadata)
+}
+
 // GetLastUpdatedAt fetches the last updated timestamp from the database.
 func (repo *MetadataRepositoryImpl) GetLastUpdatedAt() time.Time {
 	var metadata model.Metadata
 	if err := database.GetDB().Order("last_updated_at desc").First(&metadata).Error; err != nil {
-		log.Printf("Error fetching last updated time: %v", err)
-		return time.Time{} // Return zero time if error occurs
+		repo.SaveNewMetadata()
+		return time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC) // Return long before value so that next update is triggered
 	}
+
 	return metadata.LastUpdatedAt
 }

@@ -1,10 +1,10 @@
 package utils
 
 import (
-	"fmt"
 	"kontest-api/repository"
 	"kontest-api/repository/impl"
 	"kontest-api/service"
+	"log/slog"
 )
 
 // Dependencies holds the application's repositories and services
@@ -17,8 +17,8 @@ type Dependencies struct {
 // NewDependencies initializes the Dependencies struct
 func NewDependencies(kontestRepository repository.KontestRepository, metadataRepository repository.MetadataRepository) *Dependencies {
 	// print the kontestRepository and metadataRepository
-	fmt.Println(kontestRepository)
-	fmt.Println(metadataRepository)
+	slog.Info("KontestRepository", slog.Any("kontestRepository", kontestRepository))
+	slog.Info("MetadataRepository", slog.Any("metadataRepository", metadataRepository))
 
 	return &Dependencies{
 		KontestRepository:  kontestRepository,
